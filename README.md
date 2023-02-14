@@ -1,7 +1,7 @@
 [![License MIT](https://img.shields.io/badge/License-MIT-brightgreen.svg)](https://img.shields.io/badge/License-MIT-brightgreen.svg)
 [![Godoc](http://img.shields.io/badge/go-documentation-blue.svg)](https://pkg.go.dev/git.tu-berlin.de/mcc-fred/vclock)
 
-# `vclock` -- A Go Vector Clock Implementation
+# `vclock` &mdash; A Go Vector Clock Implementation
 
 This repository is a stripped-down version of the brilliant [DistributedClocks/GoVector](github.com/DistributedClocks/GoVector)
 library.

@@ -1,3 +1,29 @@
+// Package vclock implements vector clocks. Vector clocks are a way of capturing partial ordering of events in
+// a distributed system. For more information see http://en.wikipedia.org/wiki/Vector_clock
+//
+// Create a new vector clock with the New function:
+//
+//	vc := vclock.New()
+//
+// Set the clock value for a given id:
+//
+//	vc.Set("A", 1)
+//
+// Tick the clock for a given id (increment the value by 1):
+//
+//	vc.Tick("A")
+//
+// Merge two vector clocks together:
+//
+//	vc.Merge(other)
+//
+// Compare two vector clocks:
+//
+//	vc.Compare(other, vclock.Equal)
+//
+// Get the relative ordering of two vector clocks:
+//
+//	vc.Order(other)
 package vclock
 
 import (
@@ -10,10 +36,10 @@ import (
 
 // Condition constants define how to compare a vector clock against another,
 // and may be ORed together when being provided to the Compare method.
+// Use the Equal, Ancestor, Descendant, and Concurrent constants to
+// compare vector clocks.
 type Condition int
 
-// Constants define comparison conditions between pairs of vector
-// clocks
 const (
 	Equal Condition = 1 << iota
 	Ancestor
@@ -21,23 +47,24 @@ const (
 	Concurrent
 )
 
-// Vector clocks are maps of string to uint64 where the string is the
-// id of the process, and the uint64 is the clock value
+// VClock is the type of a vector clock. A VClock is a map of process ids (string)
+// to clock values (uint64). Note that this implies that the zero clock value is 0.
 type VClock map[string]uint64
 
-// FindTicks returns the clock value for a given id, if a value is not
-// found false is returned
+// FindTicks returns the clock value for a given id or false if the id is not found.
+// This is a convenience function for accessing the clock value of a given id, you
+// can also access the clock value directly using the map syntax, e.g.: vc["A"].
 func (vc VClock) FindTicks(id string) (uint64, bool) {
 	ticks, ok := vc[id]
 	return ticks, ok
 }
 
-// New returns a new vector clock
+// New returns a new, empty vector clock.
 func New() VClock {
 	return VClock{}
 }
 
-// Copy returs a copy of the clock
+// Copy returns a deep copy of a vector clock.
 func (vc VClock) Copy() VClock {
 	cp := make(map[string]uint64, len(vc))
 	for key, value := range vc {
@@ -46,27 +73,28 @@ func (vc VClock) Copy() VClock {
 	return cp
 }
 
-// CopyFromMap copys a map to a vector clock
+// CopyFromMap creates a shallow copy of a map that is compatible with the VClock type.
 func (vc VClock) CopyFromMap(otherMap map[string]uint64) VClock {
 	return otherMap
 }
 
-// GetMap returns the map typed vector clock
+// GetMap returns the underlying map of the vector clock.
 func (vc VClock) GetMap() map[string]uint64 {
-	return map[string]uint64(vc)
+	return vc
 }
 
-// Set assigns a clock value to a clock index
+// Set sets the clock value of the given process id to the given value.
 func (vc VClock) Set(id string, ticks uint64) {
 	vc[id] = ticks
 }
 
-// Tick has replaced the old update
+// Tick increments the clock value of the given process id by 1.
+// If the process id is not found in the clock, it is added with a value of 1.
 func (vc VClock) Tick(id string) {
 	vc[id] = vc[id] + 1
 }
 
-// LastUpdate returns the clock value of the oldest clock
+// LastUpdate returns the smallest clock value in the vector clock.
 func (vc VClock) LastUpdate() (last uint64) {
 	for key := range vc {
 		if vc[key] > last {
@@ -76,8 +104,10 @@ func (vc VClock) LastUpdate() (last uint64) {
 	return last
 }
 
-// Merge takes the max of all clock values in other and updates the
-// values of the callee
+// Merge takes the maximum of all clock values in other and updates the
+// values of the callee. If the callee does not contain a given id, it is
+// added to the callee with the value from other.
+// Merge updates the callee vector clock in place.
 func (vc VClock) Merge(other VClock) {
 	for id := range other {
 		if vc[id] < other[id] {
@@ -86,7 +116,7 @@ func (vc VClock) Merge(other VClock) {
 	}
 }
 
-// Bytes returns an encoded vector clock
+// Bytes returns an encoded vector clock using the gob package.
 func (vc VClock) Bytes() []byte {
 	b := new(bytes.Buffer)
 	enc := gob.NewEncoder(b)
@@ -97,7 +127,7 @@ func (vc VClock) Bytes() []byte {
 	return b.Bytes()
 }
 
-// FromBytes decodes a vector clock
+// FromBytes decodes a vector clock from a byte slice using the gob package.
 func FromBytes(data []byte) (vc VClock, err error) {
 	b := new(bytes.Buffer)
 	b.Write(data)
@@ -107,12 +137,12 @@ func FromBytes(data []byte) (vc VClock, err error) {
 	return clock, err
 }
 
-// PrintVC prints the callees vector clock to stdout
+// PrintVC prints the callees vector clock to stdout.
 func (vc VClock) PrintVC() {
 	fmt.Println(vc.ReturnVCString())
 }
 
-// ReturnVCString returns a string encoding of a vector clock
+// ReturnVCString returns a deterministic string encoding of a vector clock.
 func (vc VClock) ReturnVCString() string {
 	//sort
 	ids := make([]string, len(vc))

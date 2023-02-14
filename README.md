@@ -3,7 +3,8 @@
 
 # `vclock` -- A Go Vector Clock Implementation
 
-This repository is a stripped-down version of the brilliant [DistributedClocks/GoVector](github.com/DistributedClocks/GoVector) library.
+This repository is a stripped-down version of the brilliant [DistributedClocks/GoVector](github.com/DistributedClocks/GoVector)
+library.
 Unfortunately, the original library is outdated and has a few bugs that make its use impossible.
 This library is created as a drop-in replacement for `github.com/DistributedClocks/GoVector/govec/vclock`.
 Other functionality of the package is not implemented.
@@ -13,6 +14,9 @@ As of now, these are the major changes:
 - include a working `go.mod` file with a specific tag
 - fix a bug where `ReturnVCString` is non-deterministic (see [this PR](https://github.com/DistributedClocks/GoVector/pull/67))
 - fix a subtle bug in the vector clock comparison function (see [this issue](https://github.com/DistributedClocks/GoVector/issues/68))
+- introduce a `Order()` function that returns the relationship of two vector clocks, based on the
+  [Voldemort implementation of vector clocks](https://github.com/voldemort/voldemort/blob/master/src/java/voldemort/versioning/VectorClockUtils.java)
+- improve documentation
 
 To use this package in your code, download the latest version:
 

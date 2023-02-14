@@ -137,23 +137,25 @@ func (vc VClock) ReturnVCString() string {
 }
 
 // Order determines the relationship between two clocks. It returns
-// Ancestor if the callee is an ancestor of the other clock, Descendant
-// if the callee is a descendant of the other clock, Equal if the clocks
-// are equal, and Concurrent if the clocks are concurrent.
-// Two important notes about this implementation:
-// 1. The return value is a constant, it is not ORed together. This means
-// that if you want to compare the output, you can use the == operator.
-// Note that we recommend using the Compare method instead.
-// 2. If the clocks are equal, the return value is Equal. This is different
-// from the original vector clock implementation, which returned Concurrent
-// AND Equal.
+// Ancestor if the given clock other is an ancestor of the callee vc,
+// Descendant if other is a descendant of vc, Equal if other and vc
+// are equal, and Concurrent if other and vc are concurrent.
 //
-// This code is adapted from the Voldemort implementation of vector clocks:
-// https://github.com/voldemort/voldemort/blob/master/src/java/voldemort/versioning/VectorClockUtils.java
-// The original code is licensed under the Apache License, Version 2.0
-// http://www.apache.org/licenses/LICENSE-2.0
-// Copyright 2008-2013 LinkedIn, Inc.
+// Two important notes about this implementation:
+//  1. The return value is a constant, it is not ORed together. This means
+//     that if you want to compare the output, you can use the == operator.
+//     Note that we recommend using the Compare method instead.
+//  2. If the clocks are equal, the return value is Equal. This is different
+//     from the original vector clock implementation, which returned Concurrent
+//     AND Equal.
 func (vc VClock) Order(other VClock) Condition {
+	// This code is adapted from the Voldemort implementation of vector clocks,
+	// see https://github.com/voldemort/voldemort/blob/master/src/java/voldemort/versioning/VectorClockUtils.java
+	//
+	// The original code is licensed under the Apache License, Version 2.0
+	// http://www.apache.org/licenses/LICENSE-2.0
+	// Copyright 2008-2013 LinkedIn, Inc.
+
 	vcBigger := false
 	otherBigger := false
 
@@ -214,7 +216,7 @@ func (vc VClock) Compare(other VClock, cond Condition) bool {
 
 // CompareOld takes another clock and determines if it is Equal, an
 // Ancestor, Descendant, or Concurrent with the callees clock.
-// Deprecated This is the original implementation of Compare, which is now
+// Deprecated: This is the original implementation of Compare, which is now
 // deprecated.  It is left here for reference.
 func (vc VClock) CompareOld(other VClock, cond Condition) bool {
 	var otherIs Condition

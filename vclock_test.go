@@ -152,6 +152,60 @@ func TestCompareDiffLengthsConcurrent(t *testing.T) {
 	}
 }
 
+func TestOrderDescendant(t *testing.T) {
+	n1 := New()
+	n2 := New()
+
+	n1.Set("X", 1)
+	n2.Set("X", 1)
+	n2.Set("Y", 1)
+
+	if n1.Order(n2) != Descendant {
+		failComparison(t, "Clocks not defined as Descendant: n1 = %s | n2 = %s", n1, n2)
+	}
+}
+
+func TestOrderAncestor(t *testing.T) {
+	n1 := New()
+	n2 := New()
+
+	n1.Set("X", 1)
+	n1.Set("Y", 1)
+	n2.Set("X", 1)
+
+	if n1.Order(n2) != Ancestor {
+		failComparison(t, "Clocks not defined as Ancestors: n1 = %s | n2 = %s", n1, n2)
+	}
+}
+
+func TestOrderEqual(t *testing.T) {
+	n1 := New()
+	n2 := New()
+
+	n1.Set("X", 1)
+	n1.Set("Y", 1)
+	n2.Set("X", 1)
+	n2.Set("Y", 1)
+
+	if n1.Order(n2) != Equal {
+		failComparison(t, "Clocks not defined as Equal: n1 = %s | n2 = %s", n1, n2)
+	}
+}
+
+func TestOrderConcurrent(t *testing.T) {
+	n1 := New()
+	n2 := New()
+
+	n1.Set("X", 1)
+	n1.Set("Y", 2)
+	n2.Set("X", 2)
+	n2.Set("Y", 1)
+
+	if n1.Order(n2) != Concurrent {
+		failComparison(t, "Clocks not defined as Concurrent: n1 = %s | n2 = %s", n1, n2)
+	}
+}
+
 func TestCompareIdenticalClocks(t *testing.T) {
 	n1 := New()
 	n2 := New()

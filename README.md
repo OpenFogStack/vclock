@@ -12,7 +12,7 @@ As of now, these are the major changes:
 
 - include a working `go.mod` file with a specific tag
 - fix a bug where `ReturnVCString` is non-deterministic (see [this PR](https://github.com/DistributedClocks/GoVector/pull/67))
-- fix a subtle bug in the vector clock comparison function
+- fix a subtle bug in the vector clock comparison function (see [this issue](https://github.com/DistributedClocks/GoVector/issues/68))
 
 To use this package in your code, download the latest version:
 

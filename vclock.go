@@ -12,8 +12,8 @@ import (
 // and may be ORed together when being provided to the Compare method.
 type Condition int
 
-//Constants define compairison conditions between pairs of vector
-//clocks
+// Constants define comparison conditions between pairs of vector
+// clocks
 const (
 	Equal Condition = 1 << iota
 	Ancestor
@@ -21,23 +21,23 @@ const (
 	Concurrent
 )
 
-//Vector clocks are maps of string to uint64 where the string is the
-//id of the process, and the uint64 is the clock value
+// Vector clocks are maps of string to uint64 where the string is the
+// id of the process, and the uint64 is the clock value
 type VClock map[string]uint64
 
-//FindTicks returns the clock value for a given id, if a value is not
-//found false is returned
+// FindTicks returns the clock value for a given id, if a value is not
+// found false is returned
 func (vc VClock) FindTicks(id string) (uint64, bool) {
 	ticks, ok := vc[id]
 	return ticks, ok
 }
 
-//New returns a new vector clock
+// New returns a new vector clock
 func New() VClock {
 	return VClock{}
 }
 
-//Copy returs a copy of the clock
+// Copy returs a copy of the clock
 func (vc VClock) Copy() VClock {
 	cp := make(map[string]uint64, len(vc))
 	for key, value := range vc {
@@ -46,27 +46,27 @@ func (vc VClock) Copy() VClock {
 	return cp
 }
 
-//CopyFromMap copys a map to a vector clock
+// CopyFromMap copys a map to a vector clock
 func (vc VClock) CopyFromMap(otherMap map[string]uint64) VClock {
 	return otherMap
 }
 
-//GetMap returns the map typed vector clock
+// GetMap returns the map typed vector clock
 func (vc VClock) GetMap() map[string]uint64 {
 	return map[string]uint64(vc)
 }
 
-//Set assigns a clock value to a clock index
+// Set assigns a clock value to a clock index
 func (vc VClock) Set(id string, ticks uint64) {
 	vc[id] = ticks
 }
 
-//Tick has replaced the old update
+// Tick has replaced the old update
 func (vc VClock) Tick(id string) {
 	vc[id] = vc[id] + 1
 }
 
-//LastUpdate returns the clock value of the oldest clock
+// LastUpdate returns the clock value of the oldest clock
 func (vc VClock) LastUpdate() (last uint64) {
 	for key := range vc {
 		if vc[key] > last {
@@ -76,8 +76,8 @@ func (vc VClock) LastUpdate() (last uint64) {
 	return last
 }
 
-//Merge takes the max of all clock values in other and updates the
-//values of the callee
+// Merge takes the max of all clock values in other and updates the
+// values of the callee
 func (vc VClock) Merge(other VClock) {
 	for id := range other {
 		if vc[id] < other[id] {
@@ -86,7 +86,7 @@ func (vc VClock) Merge(other VClock) {
 	}
 }
 
-//Bytes returns an encoded vector clock
+// Bytes returns an encoded vector clock
 func (vc VClock) Bytes() []byte {
 	b := new(bytes.Buffer)
 	enc := gob.NewEncoder(b)
@@ -97,7 +97,7 @@ func (vc VClock) Bytes() []byte {
 	return b.Bytes()
 }
 
-//FromBytes decodes a vector clock
+// FromBytes decodes a vector clock
 func FromBytes(data []byte) (vc VClock, err error) {
 	b := new(bytes.Buffer)
 	b.Write(data)
@@ -107,12 +107,12 @@ func FromBytes(data []byte) (vc VClock, err error) {
 	return clock, err
 }
 
-//PrintVC prints the callees vector clock to stdout
+// PrintVC prints the callees vector clock to stdout
 func (vc VClock) PrintVC() {
 	fmt.Println(vc.ReturnVCString())
 }
 
-//ReturnVCString returns a string encoding of a vector clock
+// ReturnVCString returns a string encoding of a vector clock
 func (vc VClock) ReturnVCString() string {
 	//sort
 	ids := make([]string, len(vc))
@@ -136,9 +136,87 @@ func (vc VClock) ReturnVCString() string {
 	return buffer.String()
 }
 
-//Compare takes another clock and determines if it is Equal, an
-//Ancestor, Descendant, or Concurrent with the callees clock.
+// Order determines the relationship between two clocks. It returns
+// Ancestor if the callee is an ancestor of the other clock, Descendant
+// if the callee is a descendant of the other clock, Equal if the clocks
+// are equal, and Concurrent if the clocks are concurrent.
+// Two important notes about this implementation:
+// 1. The return value is a constant, it is not ORed together. This means
+// that if you want to compare the output, you can use the == operator.
+// Note that we recommend using the Compare method instead.
+// 2. If the clocks are equal, the return value is Equal. This is different
+// from the original vector clock implementation, which returned Concurrent
+// AND Equal.
+//
+// This code is adapted from the Voldemort implementation of vector clocks:
+// https://github.com/voldemort/voldemort/blob/master/src/java/voldemort/versioning/VectorClockUtils.java
+// The original code is licensed under the Apache License, Version 2.0
+// http://www.apache.org/licenses/LICENSE-2.0
+// Copyright 2008-2013 LinkedIn, Inc.
+func (vc VClock) Order(other VClock) Condition {
+	vcBigger := false
+	otherBigger := false
+
+	// we're finding the entries that both clocks have in common
+	commonEntries := make(map[string]struct{})
+
+	for id := range vc {
+		if _, ok := other[id]; ok {
+			commonEntries[id] = struct{}{}
+		}
+	}
+
+	if len(vc) > len(commonEntries) {
+		vcBigger = true
+	}
+	if len(other) > len(commonEntries) {
+		otherBigger = true
+	}
+
+	for id := range commonEntries {
+		if vcBigger && otherBigger {
+			break
+		}
+		vcVersion := vc[id]
+		otherVersion := other[id]
+
+		if vcVersion > otherVersion {
+			vcBigger = true
+		} else if vcVersion < otherVersion {
+			otherBigger = true
+		}
+	}
+
+	if !vcBigger && !otherBigger {
+		return Equal
+	}
+
+	if vcBigger && !otherBigger {
+		return Ancestor
+	}
+
+	if !vcBigger && otherBigger {
+		return Descendant
+	}
+
+	return Concurrent
+}
+
+// Compare takes another clock ("other") and determines if it is Equal, an
+// Ancestor, Descendant, or Concurrent with the callees ("vc") clock.
+// The condition is specified by the cond parameter, which may be ORed.
+// For example, to check if two clocks are concurrent or descendants, you would
+// call Compare(other, Concurrent|Descendant). If the condition is met, true
+// is returned, otherwise false is returned.
 func (vc VClock) Compare(other VClock, cond Condition) bool {
+	return vc.Order(other)&cond != 0
+}
+
+// CompareOld takes another clock and determines if it is Equal, an
+// Ancestor, Descendant, or Concurrent with the callees clock.
+// Deprecated This is the original implementation of Compare, which is now
+// deprecated.  It is left here for reference.
+func (vc VClock) CompareOld(other VClock, cond Condition) bool {
 	var otherIs Condition
 	// Preliminary qualification based on length
 	if len(vc) > len(other) {

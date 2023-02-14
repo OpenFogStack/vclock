@@ -1,7 +1,7 @@
 package vclock
 
 import (
-	"fmt"
+	"strconv"
 	"testing"
 )
 
@@ -169,8 +169,8 @@ func TestCompareIdenticalClocks(t *testing.T) {
 		failComparison(t, "Clocks are defined as Ancestor: n1 = %s | n2 = %s", n1, n2)
 	} else if n1.Compare(n2, Descendant) {
 		failComparison(t, "Clocks are defined as Descendant: n1 = %s | n2 = %s", n1, n2)
-	} else if !n1.Compare(n2, Concurrent) {
-		failComparison(t, "Clocks not defined as Concurrent: n1 = %s | n2 = %s", n1, n2)
+	} else if n1.Compare(n2, Concurrent) {
+		failComparison(t, "Clocks are defined as Concurrent: n1 = %s | n2 = %s", n1, n2)
 	}
 
 	if !n2.Compare(n1, Equal) {
@@ -179,8 +179,8 @@ func TestCompareIdenticalClocks(t *testing.T) {
 		failComparison(t, "Clocks are defined as Ancestor: n1 = %s | n2 = %s", n2, n1)
 	} else if n2.Compare(n1, Descendant) {
 		failComparison(t, "Clocks are defined as Descendant: n1 = %s | n2 = %s", n2, n1)
-	} else if !n2.Compare(n1, Concurrent) {
-		failComparison(t, "Clocks not defined as Concurrent: n1 = %s | n2 = %s", n2, n1)
+	} else if n2.Compare(n1, Concurrent) {
+		failComparison(t, "Clocks are defined as Concurrent: n1 = %s | n2 = %s", n2, n1)
 	}
 }
 
@@ -280,7 +280,7 @@ func TestCompareNonIdenticalNames(t *testing.T) {
 	}
 }
 
-func TestCompareNonIdenticalNames2(t *testing.T) {
+func TestCompareDifferentLengths(t *testing.T) {
 	n1 := New()
 	n2 := New()
 
@@ -355,43 +355,83 @@ func TestVCString(t *testing.T) {
 	}
 }
 
-func Test2(t *testing.T) {
-	n1 := New()
-	n2 := New()
-
-	// [map[node2:1 node3:1 node9:1]]
-	n1.Set("A", 1)
-	n1.Set("B", 1)
-	n1.Set("C", 1)
-
-	// map[node1:1 node3:4 node5:2 node6:1 node8:2 node9:3]
-	n2.Set("B", 4)
-	n2.Set("C", 3)
-	n2.Set("D", 1)
-	n2.Set("E", 1)
-
-	fmt.Printf("n1 concurrent n2: %v\n", n1.Compare(n2, Concurrent))
-	fmt.Printf("n2 concurrent n1: %v\n", n2.Compare(n1, Concurrent))
-	fmt.Printf("n1 ancestor n2: %v\n", n1.Compare(n2, Ancestor))
-	fmt.Printf("n2 ancestor n1: %v\n", n2.Compare(n1, Ancestor))
-	fmt.Printf("n1 descendant n2: %v\n", n1.Compare(n2, Descendant))
-	fmt.Printf("n2 descendant n1: %v\n", n2.Compare(n1, Descendant))
-	fmt.Printf("n1 equal n2: %v\n", n1.Compare(n2, Equal))
-	fmt.Printf("n2 equal n1: %v\n", n2.Compare(n1, Equal))
-
-	if n1.Compare(n2, Descendant) {
-		failComparison(t, "Clocks are defined as descendant: n1 = %s | n2 = %s", n1, n2)
+func genVClock(n int) VClock {
+	c := New()
+	for i := 0; i < n; i++ {
+		// deterministic but pseudo random
+		x := (i * 1103515245) % 12345
+		c.Set(strconv.Itoa(i), uint64(x))
 	}
+	return c
+}
 
-	if n1.Compare(n2, Ancestor) {
-		failComparison(t, "Clocks are defined as ancestor: n1 = %s | n2 = %s", n2, n1)
+func BenchmarkCompareEqual(b *testing.B) {
+	n1 := genVClock(100)
+	n2 := genVClock(100)
+
+	for i := 0; i < b.N; i++ {
+		n1.Compare(n2, Equal)
 	}
+}
 
-	if n1.Compare(n2, Equal) {
-		failComparison(t, "Clocks are defined as equal: n1 = %s | n2 = %s", n1, n2)
+func BenchmarkCompareOldEqual(b *testing.B) {
+	n1 := genVClock(100)
+	n2 := genVClock(100)
+
+	for i := 0; i < b.N; i++ {
+		n1.CompareOld(n2, Equal)
 	}
+}
 
-	if !n2.Compare(n1, Concurrent) {
-		failComparison(t, "Clocks are not defined as concurrent: n1 = %s | n2 = %s", n2, n1)
+func BenchmarkCompareConcurrent(b *testing.B) {
+	n1 := genVClock(100)
+	n2 := genVClock(100)
+
+	for i := 0; i < b.N; i++ {
+		n1.Compare(n2, Concurrent)
+	}
+}
+
+func BenchmarkCompareOldConcurrent(b *testing.B) {
+	n1 := genVClock(100)
+	n2 := genVClock(100)
+
+	for i := 0; i < b.N; i++ {
+		n1.CompareOld(n2, Concurrent)
+	}
+}
+func BenchmarkCompareAncestor(b *testing.B) {
+	n1 := genVClock(100)
+	n2 := genVClock(100)
+
+	for i := 0; i < b.N; i++ {
+		n1.Compare(n2, Ancestor)
+	}
+}
+
+func BenchmarkCompareOldAncestor(b *testing.B) {
+	n1 := genVClock(100)
+	n2 := genVClock(100)
+
+	for i := 0; i < b.N; i++ {
+		n1.CompareOld(n2, Ancestor)
+	}
+}
+
+func BenchmarkCompareDescendant(b *testing.B) {
+	n1 := genVClock(100)
+	n2 := genVClock(100)
+
+	for i := 0; i < b.N; i++ {
+		n1.Compare(n2, Descendant)
+	}
+}
+
+func BenchmarkCompareOldDescendant(b *testing.B) {
+	n1 := genVClock(100)
+	n2 := genVClock(100)
+
+	for i := 0; i < b.N; i++ {
+		n1.CompareOld(n2, Descendant)
 	}
 }
